@@ -2,6 +2,8 @@
 
 一个**单文件、离线、不用安装**的记账小工具。双击打开就能用，数据只存在你自己的电脑里。
 
+**在线试用 → https://hhr-star.github.io/moneybook/**
+
 > A single-file, offline personal finance tracker for Chinese users. No install, no account, no server. All data stays in your browser.
 
 ![总览](docs/overview.png)

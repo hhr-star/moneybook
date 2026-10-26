@@ -25,5 +25,8 @@ const html = tpl
 
 const out = join(root, 'MoneyBook.html');
 writeFileSync(out, html, 'utf8');
+// 同一份内容再存一份 index.html，GitHub Pages 会用根目录的 index.html 当首页
+writeFileSync(join(root, 'index.html'), html, 'utf8');
 console.log('✅ 已生成：' + out);
+console.log('   同时生成 index.html（GitHub Pages 入口）');
 console.log('   大小：' + (Buffer.byteLength(html) / 1024).toFixed(1) + ' KB');
