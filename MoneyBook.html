@@ -603,8 +603,8 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
 /* 手机竖屏：再收紧一档 */
 @media (max-width: 480px) {
-  .brand small { display: none; }
-  .brand b { font-size: 15px; }
+  /* 屏幕太窄，藏掉品牌文字，让 6 个导航项一屏放得下 */
+  .brand b, .brand small { display: none; }
   .brand .logo { width: 34px; height: 34px; font-size: 18px; border-radius: 10px; }
   .sidebar { padding: 10px 12px; gap: 6px; }
   .topbar { padding: 10px 12px 6px; }
