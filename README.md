@@ -2,7 +2,10 @@
 
 一个**单文件、离线、不用安装**的记账小工具。双击打开就能用，数据只存在你自己的电脑里。
 
-**在线试用 → https://hhr-star.github.io/moneybook/**
+[![Release](https://img.shields.io/github/v/release/hhr-star/moneybook?color=4667f5)](https://github.com/hhr-star/moneybook/releases)
+[![License](https://img.shields.io/github/license/hhr-star/moneybook?color=22c55e)](LICENSE)
+
+**在线试用 → https://hhr-star.github.io/moneybook/** ｜ **下载 → [Release](https://github.com/hhr-star/moneybook/releases/latest)**
 
 > 支持「添加到主屏幕」，装到手机桌面后跟原生 App 一样用，断网也能开。
 
@@ -51,8 +54,8 @@
 
 ### 方式二：下载到本地
 
-1. 下载本仓库的 [`MoneyBook.html`](MoneyBook.html)
-2. 双击，用 Edge 或 Chrome 打开
+1. 从 [Releases](https://github.com/hhr-star/moneybook/releases/latest) 下载 `moneybook-v1.0.0.zip`，解压后双击 `启动记账本.bat`
+2. 或者直接下载本仓库的 [`MoneyBook.html`](MoneyBook.html)，双击用 Edge / Chrome 打开
 3. 第一次会看到示例数据，点顶部「清空示例，开始记自己的账」
 
 不需要安装、不需要注册、平时不需要联网。
@@ -87,8 +90,11 @@ node gen-selftest.mjs
 core.js              纯函数：统计、占比、日历矩阵、ICS 解析、中文口语解析（可单独跑测试）
 app.js               界面：渲染、事件、导入导出、备份、AI 调用
 styles.css           全部样式
-index.template.html  页面骨架，含三个占位符
-build.mjs            把上面几个拼成 MoneyBook.html
+index.template.html  页面骨架，含占位符
+build.mjs            构建：拼出 MoneyBook.html（纯单文件）、index.html（PWA）、sw.js
+make_icons.py        生成 PWA 图标
+manifest.webmanifest PWA 清单
+sw.js                Service Worker（由 build.mjs 生成，别手改）
 test-core.mjs        核心逻辑自测
 test-render.mjs      渲染自测
 gen-selftest.mjs     生成端到端测试页
