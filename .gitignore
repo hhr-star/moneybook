@@ -1,0 +1,21 @@
+# 依赖（本项目零依赖，这里是防止误提交）
+node_modules/
+
+# 测试时生成的临时页面
+_selftest.html
+_preview*.html
+_probe.html
+_probe-dom.html
+_e2e*.html
+
+# 系统 / 编辑器
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.log
+
+# 本地备份
+*.bak
+记账本备份-*.json
