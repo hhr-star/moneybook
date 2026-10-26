@@ -73,7 +73,7 @@ self.addEventListener('install', function (e) {
   e.waitUntil(
     caches.open(CACHE).then(function (c) {
       return Promise.all(ASSETS.map(function (url) {
-        return c.add(new Request(url, { cache: 'reload' })).catch(function () { return null; });
+        return c.add(url).catch(function () { return null; });
       }));
     }).then(function () { return self.skipWaiting(); })
   );
