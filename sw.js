@@ -1,5 +1,5 @@
 /* 记账本 Service Worker —— 由 build.mjs 生成，请勿手改 */
-const CACHE = 'moneybook-c679cfb97ca5';
+const CACHE = 'moneybook-f685b55ddfe6';
 const ASSETS = [
   './',
   './index.html',

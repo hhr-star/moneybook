@@ -574,18 +574,68 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     flex-direction: row; align-items: center; gap: 10px;
     padding: 12px 14px; overflow-x: auto;
     border-right: 0; border-bottom: 1px solid var(--line);
+    scrollbar-width: none;
   }
+  .sidebar::-webkit-scrollbar { display: none; }
   .brand { padding: 0; }
   .brand small { display: none; }
-  .nav { flex-direction: row; gap: 2px; }
-  .nav-item { padding: 8px 12px; white-space: nowrap; }
+  .nav { flex-direction: row; gap: 2px; flex: 0 0 auto; }
+  .nav-item { padding: 8px 12px; white-space: nowrap; flex: 0 0 auto; }
   .nav-item i { display: none; }
   .side-foot { display: none; }
-  .topbar { padding: 14px 16px 8px; flex-wrap: wrap; }
+  .topbar { padding: 14px 16px 8px; flex-wrap: wrap; gap: 10px; }
   .content { padding: 8px 16px 40px; }
   .month-title { font-size: 16px; min-width: 120px; }
   .cat-row { flex-wrap: wrap; }
-  .cat-usage { flex: 1 0 100%; }
+  .cat-usage { flex: 1 0 100%; max-width: none; }
+}
+
+/* 手机竖屏：再收紧一档 */
+@media (max-width: 480px) {
+  .brand small { display: none; }
+  .brand b { font-size: 15px; }
+  .brand .logo { width: 34px; height: 34px; font-size: 18px; border-radius: 10px; }
+  .sidebar { padding: 10px 12px; gap: 6px; }
+  .topbar { padding: 10px 12px 6px; }
+  .content { padding: 6px 12px 36px; }
+  .month-title { font-size: 15px; min-width: auto; }
+  .month-switch { flex-wrap: wrap; gap: 6px; }
+  .btn { padding: 8px 13px; font-size: 13px; }
+  .btn.small { padding: 6px 10px; }
+
+  .kpi-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .kpi { padding: 10px 12px; }
+  .kpi-value { font-size: 17px; }
+  .kpi-label { font-size: 11px; }
+
+  .card { padding: 14px 14px; border-radius: 14px; }
+  .card-head h3 { font-size: 14px; }
+
+  .pie { width: 180px; height: 180px; }
+  .pie-box { flex: 0 0 auto; }
+  .pie-t1 { font-size: 16px; }
+  .legend-item { padding: 5px 6px; }
+  .legend-amt { display: none; }
+
+  .quick { flex-wrap: wrap; }
+  .quick .btn { flex: 1 0 100%; justify-content: center; }
+  .quick-input { font-size: 15px; }
+
+  .rec-amt { font-size: 14px; }
+  .rec-ops { opacity: .45; }
+
+  .cal-cell { aspect-ratio: 1 / 1; border-radius: 8px; }
+  .cal-day { font-size: 12px; }
+  .cal-amt { font-size: 9.5px; }
+  .cal-sum { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .cal-kpi { padding: 8px 10px; }
+  .cal-kpi b { font-size: 15px; }
+
+  .modal { padding: 16px 16px; border-radius: 16px; }
+  .field > span { min-width: 60px; font-size: 12px; }
+
+  .banner { font-size: 12.5px; padding: 10px 12px; }
+  .banner .link-btn { margin-left: 0; }
 }
 
 /* 滚动条 */
