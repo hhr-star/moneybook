@@ -2,9 +2,25 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="color-scheme" content="light">
+<meta name="description" content="单文件离线记账工具：预算、扇形图、收入结余、多账户、日历日程、自动备份。">
+<meta name="theme-color" content="#4667f5">
 <title>记账本</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="记账本">
+<script>
+/* 离线缓存：只在 http(s) 下注册，file:// 打开时会自动跳过 */
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function () { /* 离线缓存不可用不影响使用 */ });
+  });
+}
+</script>
 <style>
 /* ================= 记账本 · 样式 ================= */
 :root {

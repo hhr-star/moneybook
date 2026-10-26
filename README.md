@@ -4,6 +4,8 @@
 
 **在线试用 → https://hhr-star.github.io/moneybook/**
 
+> 支持「添加到主屏幕」，装到手机桌面后跟原生 App 一样用，断网也能开。
+
 > A single-file, offline personal finance tracker for Chinese users. No install, no account, no server. All data stays in your browser.
 
 ![总览](docs/overview.png)
@@ -40,6 +42,15 @@
 
 ## 直接用
 
+### 方式一：在线版（手机也能用）
+
+打开 https://hhr-star.github.io/moneybook/
+
+- **电脑**：直接收藏，或从浏览器菜单「安装」成一独立窗口
+- **手机**：浏览器菜单 →「添加到主屏幕」，加完就跟 App 一样，断网也能开
+
+### 方式二：下载到本地
+
 1. 下载本仓库的 [`MoneyBook.html`](MoneyBook.html)
 2. 双击，用 Edge 或 Chrome 打开
 3. 第一次会看到示例数据，点顶部「清空示例，开始记自己的账」
@@ -47,6 +58,8 @@
 不需要安装、不需要注册、平时不需要联网。
 
 **建议第一件事**：到「设置 → 自动备份」点「选择位置」，选个文件存备份。浏览器数据万一丢了还能恢复。
+
+> 两种方式的数据**不互通**（`https://` 和 `file://` 在浏览器里是两个存储空间），挑一个长期用。
 
 ---
 
