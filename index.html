@@ -465,10 +465,22 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 }
 .acc-dot { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 10px; }
 .acc-main { flex: 1; min-width: 0; }
-.acc-name { font-weight: 600; font-size: 13.5px; }
+.acc-name { font-weight: 600; font-size: 13.5px; display: flex; align-items: center; gap: 6px; }
+.acc-tag {
+  font-size: 10px; font-weight: 600; color: var(--primary);
+  background: #eef2ff; padding: 1px 6px; border-radius: 99px;
+  letter-spacing: .3px;
+}
 .acc-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
 .acc-bal { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 15px; }
 .acc-bal.neg { color: var(--danger); }
+
+.check-row {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 12.5px; color: var(--text-2); line-height: 1.5;
+  padding: 8px 0 4px; cursor: pointer;
+}
+.check-row input { margin-top: 2px; accent-color: var(--primary); }
 
 .flow-list { display: flex; flex-direction: column; gap: 9px; }
 .flow-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
@@ -1977,7 +1989,8 @@ window.Core = Core;
     presetDate: '',
     presetAmount: '',
     presetItem: '',
-    formType: ''
+    formType: '',
+    fixAccId: ''
   };
 
   function loadState() {
@@ -2035,7 +2048,8 @@ window.Core = Core;
     state.records = demo.map(function (r, i) {
       return {
         id: 'demo_' + i, type: 'expense', date: ds(r[4]), categoryId: id(r[0]),
-        accountId: '', toAccountId: '', item: r[1], amount: r[2], pay: r[3], note: '', createdAt: i
+        accountId: C.accountFromPay(r[3], state.accounts || []),
+        toAccountId: '', item: r[1], amount: r[2], pay: r[3], note: '', createdAt: i
       };
     });
     // 示例里放一笔收入，别人第一次打开能看懂收支是怎么回事
@@ -2148,7 +2162,32 @@ window.Core = Core;
     }
     var alert = alertInfo();
     if (alert) out += alertBannerHTML(alert);
+    var mis = misAccHint();
+    if (mis) {
+      out += '<div class="banner warn">⚠ 你的支出几乎全记在「<b>' + esc(mis.acc.name) + '</b>」上（' + mis.n + ' 笔）。' +
+        '如果实际是微信 / 支付宝付的，' +
+        '<button class="link-btn" data-act="fix-acc" data-id="' + esc(mis.acc.id) + '">一点批量转过去</button>' +
+        '，以后新记录会自动跟着走。' +
+        '<button class="icon-btn tiny" data-act="dismiss-misacc" title="不再提示" style="margin-left:8px">✕</button></div>';
+    }
     return out;
+  }
+
+  // 检测「支出几乎全记在第一个账户」的情况，主动提示纠正
+  function misAccHint() {
+    try {
+      if (localStorage.getItem('moneybook.misAccHint') === 'off') return null;
+    } catch (e) { /* ignore */ }
+    var accounts = state.accounts || [];
+    if (accounts.length < 2) return null;
+    var exp = state.records.filter(function (r) { return C.recType(r) === 'expense'; });
+    if (exp.length < 5) return null;
+    var cnt = {};
+    exp.forEach(function (r) { cnt[r.accountId] = (cnt[r.accountId] || 0) + 1; });
+    var top = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a]; })[0];
+    if (!top || top !== accounts[0].id) return null;
+    if (cnt[top] / exp.length < 0.9) return null;
+    return { acc: accounts[0], n: cnt[top] };
   }
 
   /* ---------- 日程提醒 ---------- */
@@ -2654,18 +2693,26 @@ window.Core = Core;
   function accountsHTML(st) {
     var ab = C.accountBalances(state, view.month);
     var total = (state.accounts || []).reduce(function (a, x) { return a + (ab.balance[x.id] || 0); }, 0);
+    var defAcc = pickAccount({ pay: '', accountId: '' });
+    var defLabel = (state.accounts || []).filter(function (a) { return a.id === defAcc; })[0];
 
     var rows = (state.accounts || []).map(function (a) {
       var bal = ab.balance[a.id] || 0;
       var flow = ab.flow[a.id] || 0;
+      var used = state.records.filter(function (r) {
+        return C.recType(r) !== 'transfer' && r.accountId === a.id;
+      }).length;
       return '<div class="acc-row">' +
         '<i class="acc-dot" style="background:' + esc(a.color) + '"></i>' +
         '<div class="acc-main">' +
-          '<div class="acc-name">' + esc(a.name) + '</div>' +
+          '<div class="acc-name">' + esc(a.name) +
+            (a.id === defAcc ? '<span class="acc-tag">默认</span>' : '') + '</div>' +
           '<div class="acc-sub">本月变动 ' +
-            '<span class="' + (flow >= 0 ? 'pos' : 'neg') + '">' + (flow >= 0 ? '+' : '') + C.money(flow) + '</span></div>' +
+            '<span class="' + (flow >= 0 ? 'pos' : 'neg') + '">' + (flow >= 0 ? '+' : '') + C.money(flow) + '</span>' +
+            (used ? ' · 共 ' + used + ' 笔' : '') + '</div>' +
         '</div>' +
         '<div class="acc-bal' + (bal < 0 ? ' neg' : '') + '">¥' + C.money(bal) + '</div>' +
+        (used ? '<button class="icon-btn tiny" data-act="fix-acc" data-id="' + esc(a.id) + '" title="把这里的记录批量改到别的账户">⇄</button>' : '') +
         '<button class="icon-btn tiny" data-act="edit-acc" data-id="' + esc(a.id) + '" title="编辑">✎</button>' +
         '<button class="icon-btn tiny danger" data-act="del-acc" data-id="' + esc(a.id) + '" title="删除">✕</button>' +
       '</div>';
@@ -2677,7 +2724,10 @@ window.Core = Core;
           '<button class="btn ghost small" data-act="add-acc">＋ 新增账户</button></div>' +
         '<div class="acc-total"><span>总资产</span><b class="' + (total < 0 ? 'neg' : '') + '">¥' + C.money(total) + '</b></div>' +
         '<div class="acc-list">' + rows + '</div>' +
-        '<p class="hint">设了「初始余额」就能看到真实余额（比如银行卡里现在有多少）。每月变动是这个月进出的净额。</p>' +
+        '<p class="hint">余额 = 初始余额 + 收入 − 支出 ± 转账。' +
+          '<b>总资产</b>含全部历史记录；总览页的<b>本月结余</b>只算当月收入减当月支出，两个数口径不一样，对不上是正常的。</p>' +
+        '<p class="hint">没写支付方式时，新记录默认记到「<b>' + esc(defLabel ? defLabel.name : '—') + '</b>」。' +
+          '点账户右边的 ⇄ 可以把记错账户的记录批量转移。</p>' +
       '</section>' +
 
       '<section class="card">' +
@@ -2855,7 +2905,7 @@ window.Core = Core;
         : null;
       var defaultCat = state.categories[0] ? state.categories[0].id : '';
       var accounts = state.accounts || [];
-      var defaultAcc = accounts[0] ? accounts[0].id : '';
+      var defaultAcc = pickAccount({ pay: '', accountId: '' });
       var d = r || {
         type: 'expense',
         date: view.presetDate || C.todayStr(),
@@ -2935,8 +2985,33 @@ window.Core = Core;
       '</div></div>';
     }
 
+    if (view.modal === 'fixacc') {
+      var src = accountOf(view.fixAccId);
+      if (!src) return '';
+      var n = state.records.filter(function (r) {
+        return C.recType(r) !== 'transfer' && r.accountId === src.id;
+      }).length;
+      var others = (state.accounts || []).filter(function (a) { return a.id !== src.id; });
+      var opts2 = others.map(function (a) {
+        return '<option value="' + esc(a.id) + '">' + esc(a.name) + '</option>';
+      }).join('');
+      return '<div class="modal-mask"><div class="modal small">' +
+        '<div class="modal-head"><h3>转移「' + esc(src.name) + '」的记录</h3>' +
+          '<button class="icon-btn" data-act="close-modal">✕</button></div>' +
+        '<div class="form">' +
+          '<p class="hint" style="margin-top:0">这个账户下有 <b>' + n + '</b> 笔收支记录。' +
+            '选一个目标账户，把它们全部转过去（转账记录不受影响）。</p>' +
+          '<label class="field"><span>转去</span><select id="fFixTo" class="sel">' + opts2 + '</select></label>' +
+          '<p class="hint">常见用途：之前没写支付方式，记录全落在「现金」上，现在一次性纠正。</p>' +
+        '</div>' +
+        '<div class="modal-foot"><button class="btn ghost" data-act="close-modal">取消</button>' +
+          '<button class="btn primary" data-act="do-fix-acc" data-from="' + esc(src.id) + '">转移 ' + n + ' 笔</button></div>' +
+      '</div></div>';
+    }
+
     if (view.modal === 'acc') {
       var acc = view.editingId ? accountOf(view.editingId) : null;
+      var isDefault = !!acc && state.settings.defaultAccountId === acc.id;
       return '<div class="modal-mask"><div class="modal small">' +
         '<div class="modal-head"><h3>' + (acc ? '编辑账户' : '新增账户') + '</h3>' +
           '<button class="icon-btn" data-act="close-modal">✕</button></div>' +
@@ -2948,7 +3023,12 @@ window.Core = Core;
           '<label class="field"><span>初始余额</span>' +
             '<input type="number" step="0.01" id="fAccInit" class="num-in wide" value="' +
             (acc ? acc.initBalance : 0) + '" placeholder="0"></label>' +
-          '<p class="hint">初始余额是你开始记账那一刻这个账户里有多少钱。之后余额 = 初始余额 + 收入 − 支出。</p>' +
+          (acc
+            ? '<label class="check-row"><input type="checkbox" id="fAccDefault"' + (isDefault ? ' checked' : '') + '>' +
+              '<span>设为默认账户（没说支付方式时记到这里）</span></label>'
+            : '') +
+          '<p class="hint">初始余额是你开始记账那一刻这个账户里有多少钱。' +
+            '余额 = 初始余额 + 收入 − 支出 ± 转账。</p>' +
         '</div>' +
         '<div class="modal-foot"><button class="btn ghost" data-act="close-modal">取消</button>' +
           '<button class="btn primary" data-act="save-acc">' + (acc ? '保存' : '添加') + '</button></div>' +
@@ -3111,6 +3191,10 @@ window.Core = Core;
           try { localStorage.setItem('moneybook.alertDismissed', C.todayStr()); } catch (e) { /* ignore */ }
           render();
           break;
+        case 'dismiss-misacc':
+          try { localStorage.setItem('moneybook.misAccHint', 'off'); } catch (e) { /* ignore */ }
+          render();
+          break;
         case 'quick-add': quickAdd(); break;
         case 'filter-cat':
           view.filterCat = el.getAttribute('data-cat') || '';
@@ -3131,6 +3215,14 @@ window.Core = Core;
         case 'add-cat': view.modal = 'addcat'; render(); break;
         case 'save-cat': saveCat(); break;
         case 'del-cat': delCat(id); break;
+        case 'fix-acc':
+          view.fixAccId = id;
+          view.modal = 'fixacc';
+          render();
+          break;
+        case 'do-fix-acc':
+          doFixAcc(el.getAttribute('data-from'));
+          break;
         case 'add-acc': view.modal = 'acc'; view.editingId = null; render(); break;
         case 'edit-acc': view.modal = 'acc'; view.editingId = id; render(); break;
         case 'save-acc': saveAcc(); break;
@@ -3300,6 +3392,7 @@ window.Core = Core;
       view.month = rec.date.slice(0, 7);
       toast((ftype === 'income' ? '记了收入 ¥' : ftype === 'transfer' ? '转账 ¥' : '记下了 ¥') + C.money(rec.amount));
     }
+    rememberAccount(rec.accountId);
     save();
     closeModalSilent();
     render();
@@ -3314,15 +3407,38 @@ window.Core = Core;
     view.formType = '';
   }
 
+  // 决定这笔记到哪个账户：
+  // ① 说清了支付方式 → 用那个
+  // ② 用户明确设过「默认账户」→ 用它
+  // ③ 否则用上次用过的账户（越用越顺手）
+  // ④ 都没有 → 第一个账户
+  function pickAccount(p) {
+    var accounts = state.accounts || [];
+    var exists = function (id) {
+      return !!id && accounts.some(function (a) { return a.id === id; });
+    };
+    if (p && p.pay && exists(p.accountId)) return p.accountId;
+    if (exists(state.settings.defaultAccountId)) return state.settings.defaultAccountId;
+    if (exists(state.settings.lastAccountId)) return state.settings.lastAccountId;
+    return accounts.length ? accounts[0].id : '';
+  }
+
+  function rememberAccount(id) {
+    if (!id) return;
+    if (state.settings.lastAccountId === id) return;
+    state.settings.lastAccountId = id;
+  }
+
   function commitQuick(p) {
     var type = p.type || 'expense';
+    var accId = pickAccount(p);
     var rec = {
       id: C.uid('rec'),
       type: type,
       createdAt: Date.now(),
       date: p.date || C.todayStr(),
       categoryId: p.categoryId,
-      accountId: p.accountId || ((state.accounts || [])[0] || {}).id || '',
+      accountId: accId,
       item: p.item || (type === 'income' ? '收入' : '支出'),
       amount: C.round2(p.amount),
       pay: p.pay || '',
@@ -3330,12 +3446,15 @@ window.Core = Core;
       note: ''
     };
     state.records.push(rec);
+    rememberAccount(rec.accountId);
     save();
     view.quickText = '';
     view.month = rec.date.slice(0, 7);
     render();
     var catName = type === 'income' ? incomeCatOf(rec.categoryId).name : catOf(rec.categoryId).name;
-    toast('已记为「' + catName + '」' + (type === 'income' ? '+' : '') + '¥' + C.money(rec.amount));
+    var accName = accountName(rec.accountId);
+    toast('已记为「' + catName + '」' + (type === 'income' ? '+' : '') + '¥' + C.money(rec.amount) +
+      (accName ? ' · ' + accName : ''));
   }
 
   function quickAdd() {
@@ -3383,16 +3502,39 @@ window.Core = Core;
     toast('预算已更新');
   }
 
+  function doFixAcc(fromId) {
+    var toId = $('#fFixTo') ? $('#fFixTo').value : '';
+    var src = accountOf(fromId);
+    var dst = accountOf(toId);
+    if (!src || !dst) { toast('账户不存在', 'err'); return; }
+    var affected = state.records.filter(function (r) {
+      return C.recType(r) !== 'transfer' && r.accountId === fromId;
+    });
+    if (!affected.length) { toast('这个账户下没有记录', 'err'); return; }
+    if (!confirm('把「' + src.name + '」的 ' + affected.length + ' 笔记录全部转到「' + dst.name + '」？')) return;
+    makeSnapshot('批量转移账户前', true);
+    affected.forEach(function (r) { r.accountId = toId; });
+    if (state.settings.lastAccountId === fromId) state.settings.lastAccountId = toId;
+    save();
+    view.modal = '';
+    view.fixAccId = '';
+    render();
+    toast('已把 ' + affected.length + ' 笔转到「' + dst.name + '」');
+  }
+
   function saveAcc() {
     var name = $('#fAccName').value.trim();
     if (!name) { toast('账户名不能为空', 'err'); return; }
     var init = Math.round((parseFloat($('#fAccInit').value) || 0) * 100) / 100;
+    var wantDefault = $('#fAccDefault') ? $('#fAccDefault').checked : false;
     if (view.editingId) {
       var a = accountOf(view.editingId);
       if (a) {
         a.name = name;
         a.color = $('#fAccColor').value;
         a.initBalance = init;
+        if (wantDefault) state.settings.defaultAccountId = a.id;
+        else if (state.settings.defaultAccountId === a.id) delete state.settings.defaultAccountId;
       }
       toast('已保存');
     } else {
@@ -3400,12 +3542,13 @@ window.Core = Core;
         toast('已经有这个账户了', 'err');
         return;
       }
-      state.accounts.push({
+      var newAcc = {
         id: C.uid('acc'),
         name: name,
         color: $('#fAccColor').value,
         initBalance: init
-      });
+      };
+      state.accounts.push(newAcc);
       toast('已添加账户「' + name + '」');
     }
     save();

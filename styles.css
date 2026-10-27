@@ -441,10 +441,22 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 }
 .acc-dot { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 10px; }
 .acc-main { flex: 1; min-width: 0; }
-.acc-name { font-weight: 600; font-size: 13.5px; }
+.acc-name { font-weight: 600; font-size: 13.5px; display: flex; align-items: center; gap: 6px; }
+.acc-tag {
+  font-size: 10px; font-weight: 600; color: var(--primary);
+  background: #eef2ff; padding: 1px 6px; border-radius: 99px;
+  letter-spacing: .3px;
+}
 .acc-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
 .acc-bal { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 15px; }
 .acc-bal.neg { color: var(--danger); }
+
+.check-row {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 12.5px; color: var(--text-2); line-height: 1.5;
+  padding: 8px 0 4px; cursor: pointer;
+}
+.check-row input { margin-top: 2px; accent-color: var(--primary); }
 
 .flow-list { display: flex; flex-direction: column; gap: 9px; }
 .flow-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }

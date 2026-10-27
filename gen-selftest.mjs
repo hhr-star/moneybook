@@ -306,7 +306,60 @@ const script = `
       MB.view.modal = '';
       MB.render();
 
-      // 18. 空数据渲染
+      // 18. 账户归属：没说支付方式时跟随上次用的账户
+      var s7 = MB.state();
+      s7.records = [];
+      s7.settings.lastAccountId = '';
+      s7.settings.defaultAccountId = '';
+      MB.setTab('records');
+      MB.render();
+
+      q('#quickInput').value = '打车 18 微信';
+      q('[data-act="quick-add"]').click();
+      var r1 = MB.state().records[0];
+      ok(r1 && r1.accountId === 'acc_wechat', '说了微信应记到微信，实际 ' + (r1 && r1.accountId));
+      ok(MB.state().settings.lastAccountId === 'acc_wechat', '应记住上次用的账户');
+
+      q('#quickInput').value = '地铁 6';
+      q('[data-act="quick-add"]').click();
+      var r2 = MB.state().records[1];
+      ok(r2 && r2.accountId === 'acc_wechat', '没说支付方式应跟随上次的微信，实际 ' + (r2 && r2.accountId));
+
+      q('#quickInput').value = '午饭 30 支付宝';
+      q('[data-act="quick-add"]').click();
+      var r3 = MB.state().records[2];
+      ok(r3 && r3.accountId === 'acc_alipay', '说了支付宝应记到支付宝，实际 ' + (r3 && r3.accountId));
+
+      q('#quickInput').value = '买水 3';
+      q('[data-act="quick-add"]').click();
+      var r4 = MB.state().records[3];
+      ok(r4 && r4.accountId === 'acc_alipay', '应跟随上一次的支付宝，实际 ' + (r4 && r4.accountId));
+
+      // 设了默认账户后优先用默认账户
+      s7.settings.defaultAccountId = 'acc_bank';
+      q('#quickInput').value = '话费 50';
+      q('[data-act="quick-add"]').click();
+      var r5 = MB.state().records[4];
+      ok(r5 && r5.accountId === 'acc_bank', '设了默认账户应优先用它，实际 ' + (r5 && r5.accountId));
+      s7.settings.defaultAccountId = '';
+
+      // 19. 批量转移账户
+      MB.setTab('accounts');
+      MB.render();
+      var fixBtn = q('[data-act="fix-acc"]');
+      ok(fixBtn !== null, '账户页有批量转移按钮');
+      MB.view.fixAccId = 'acc_alipay';
+      MB.view.modal = 'fixacc';
+      MB.render();
+      ok(q('#fFixTo') !== null, '批量转移弹窗打开');
+      q('#fFixTo').value = 'acc_wechat';
+      q('[data-act="do-fix-acc"]').click();
+      var moved = MB.state().records.filter(function (r) { return r.accountId === 'acc_alipay'; }).length;
+      ok(moved === 0, '支付宝下的记录应全部转走，剩余 ' + moved);
+      var wechatCount = MB.state().records.filter(function (r) { return r.accountId === 'acc_wechat'; }).length;
+      ok(wechatCount === 4, '微信应有 4 笔，实际 ' + wechatCount);
+
+      // 20. 空数据渲染
       st.records = [];
       MB.setTab('overview');
       ok(q('.empty') !== null, '空数据时显示引导');
