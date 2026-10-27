@@ -1993,7 +1993,10 @@
     var cfg = state.ai || {};
     if (!cfg.key) return Promise.reject(new Error('没有填 API Key'));
     var url = (cfg.baseUrl || 'https://api.deepseek.com') + '/chat/completions';
-    return fetch(url, {
+
+    // 20 秒超时，避免网络卡住时页面一直转圈
+    var ctrl = null, timer = null;
+    var opts = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -2004,18 +2007,56 @@
         messages: messages,
         temperature: 0
       })
-    }).then(function (r) {
+    };
+    if (window.AbortController) {
+      ctrl = new AbortController();
+      opts.signal = ctrl.signal;
+      timer = setTimeout(function () { ctrl.abort(); }, 20000);
+    }
+
+    return fetch(url, opts).then(function (r) {
+      clearTimeout(timer);
       if (!r.ok) {
         return r.text().then(function (t) {
-          throw new Error('HTTP ' + r.status + '：' + t.slice(0, 120));
+          var msg = t.slice(0, 160);
+          if (r.status === 401) msg = 'API Key 不对或已失效';
+          else if (r.status === 402) msg = '账户余额不足';
+          else if (r.status === 429) msg = '请求太频繁，稍后再试';
+          else msg = 'HTTP ' + r.status + ' · ' + msg;
+          throw new Error(msg);
         });
       }
       return r.json();
     }).then(function (j) {
       var content = j && j.choices && j.choices[0] && j.choices[0].message
         ? j.choices[0].message.content : '';
+      if (!content) throw new Error('AI 返回是空的');
       return content;
+    }).catch(function (e) {
+      clearTimeout(timer);
+      if (e && e.name === 'AbortError') throw new Error('请求超时（20 秒）');
+      if (e instanceof TypeError || /Failed to fetch|NetworkError/i.test(e.message || '')) {
+        throw new Error('连不上服务：检查网络，或这个接口不允许浏览器直接调用');
+      }
+      throw e;
     });
+  }
+
+  // AI 偶尔会包代码块或加解释，这里把 JSON 抠出来
+  function extractJSON(text) {
+    var s = String(text || '').trim();
+    s = s.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+    try { return JSON.parse(s); } catch (e) { /* 继续尝试 */ }
+    var m = s.match(/\{[\s\S]*\}/);
+    if (m) {
+      try { return JSON.parse(m[0]); } catch (e2) { /* 继续 */ }
+      // 再试一次：从第一个 { 到最后一个 }
+      var first = s.indexOf('{'), last = s.lastIndexOf('}');
+      if (first >= 0 && last > first) {
+        try { return JSON.parse(s.slice(first, last + 1)); } catch (e3) { /* 放弃 */ }
+      }
+    }
+    throw new Error('AI 没按格式返回');
   }
 
   function testAi() {
@@ -2062,9 +2103,7 @@
       { role: 'system', content: sys },
       { role: 'user', content: text }
     ]).then(function (content) {
-      var m = String(content).match(/\{[\s\S]*\}/);
-      if (!m) throw new Error('AI 返回的不是 JSON');
-      var o = JSON.parse(m[0]);
+      var o = extractJSON(content);
       var type = o.type === 'income' ? 'income' : 'expense';
       var list = type === 'income' ? (state.incomeCategories || []) : state.categories;
       var cat = list.filter(function (c) { return c.name === o.category; })[0] || list[0];
@@ -2283,6 +2322,8 @@
     setTab: setTab,
     mergeEvents: mergeEvents,
     makeSnapshot: makeSnapshot,
-    readSnaps: function () { return readSnaps(); }
+    readSnaps: function () { return readSnaps(); },
+    aiParse: aiParse,
+    extractJSON: extractJSON
   };
 })();

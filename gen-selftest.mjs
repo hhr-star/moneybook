@@ -414,10 +414,55 @@ const script = `
     } catch (e) {
       out.fail.push('运行异常：' + e.message + ' @ ' + (e.stack || '').split('\\n')[1]);
     }
-    var pre = document.createElement('pre');
-    pre.id = '__out__';
-    pre.textContent = 'RESULT:' + JSON.stringify(out);
-    document.body.appendChild(pre);
+
+    // ---------- 异步：AI 记账整条链路（打本地 mock 服务）----------
+    var aiDone = function () {
+      var pre = document.createElement('pre');
+      pre.id = '__out__';
+      pre.textContent = 'RESULT:' + JSON.stringify(out);
+      document.body.appendChild(pre);
+    };
+
+    var aiBase = (window.__AI_MOCK__ || '');
+    if (!aiBase) { aiDone(); return; }
+
+    var s9 = MB.state();
+    s9.ai = { baseUrl: aiBase, model: 'mock', key: 'test-key' };
+
+    MB.aiParse('和小李 AA 我先垫的 180')
+      .then(function (r) {
+        ok(r.type === 'expense', 'AI 解析：类型应为支出，实际 ' + r.type);
+        ok(r.amount === 180, 'AI 解析：金额 180，实际 ' + r.amount);
+        ok(r.categoryId === 'cat_food', 'AI 解析：「伙食」应映射到 cat_food，实际 ' + r.categoryId);
+        ok(r.accountId === 'acc_wechat', 'AI 解析：账户「微信」应映射到 acc_wechat，实际 ' + r.accountId);
+        ok(r.item.indexOf('AA') >= 0, 'AI 解析：项目名保留了 ' + r.item);
+        ok(/^\\d{4}-\\d{2}-\\d{2}$/.test(r.date), 'AI 解析：日期格式正确 ' + r.date);
+        return MB.aiParse('发工资 8000');
+      })
+      .then(function (r2) {
+        ok(r2.type === 'income', 'AI 解析工资：应为收入，实际 ' + r2.type);
+        ok(r2.categoryId === 'inc_salary', 'AI 解析工资：应映射到 inc_salary，实际 ' + r2.categoryId);
+        // 返回不是 JSON 时应报错，而不是静默成功
+        return MB.aiParse('乱说一句').then(function () {
+          ok(false, 'AI 返回非 JSON 时应报错');
+        }, function (e) {
+          ok(true, 'AI 返回非 JSON 时正确报错：' + e.message);
+        });
+      })
+      .then(function () {
+        // key 错误时的提示
+        s9.ai.key = 'bad-key';
+        return MB.aiParse('午饭 25').then(function () {
+          ok(false, 'key 错误时应该失败');
+        }, function (e) {
+          ok(/Key 不对|401/.test(e.message), 'key 错误提示清晰：' + e.message);
+        });
+      })
+      .then(function () { aiDone(); })
+      .catch(function (e) {
+        out.fail.push('AI 链路异常：' + e.message);
+        aiDone();
+      });
   }
   if (document.readyState === 'complete') setTimeout(run, 60);
   else window.addEventListener('load', function () { setTimeout(run, 60); });
@@ -428,7 +473,12 @@ const script = `
 // 注意：页面自身代码里含有 "</body>" 字符串，必须从末尾定位真正的 body 结束标签
 const closeIdx = html.lastIndexOf('</body>');
 if (closeIdx < 0) throw new Error('找不到 </body>');
-const out = html.slice(0, closeIdx) + script + html.slice(closeIdx);
+
+// 需要测 AI 链路时，用环境变量 AI_MOCK 指定本地 mock 服务地址
+const mockUrl = process.env.AI_MOCK || '';
+const mockScript = '<script>window.__AI_MOCK__ = ' + JSON.stringify(mockUrl) + ';</script>\n';
+
+const out = html.slice(0, closeIdx) + mockScript + script + html.slice(closeIdx);
 
 writeFileSync(join(root, '_selftest.html'), out, 'utf8');
-console.log('已生成 _selftest.html');
+console.log('已生成 _selftest.html' + (mockUrl ? '（AI mock: ' + mockUrl + '）' : ''));
