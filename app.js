@@ -262,7 +262,9 @@
     presetAmount: '',
     presetItem: '',
     formType: '',
-    fixAccId: ''
+    fixAccId: '',
+    quickAccountId: '',
+    chgAccId: ''
   };
 
   function loadState() {
@@ -825,6 +827,14 @@
         '<button class="btn primary" data-act="quick-add">记下</button>' +
       '</div>' +
       '<div class="quick-hint" id="quickHint">支持中文口语，自动识别金额、分类、账户和日期；说「发工资」「收到退款」会自动记成收入</div>' +
+      '<div class="quick-acc">' +
+        '<span class="quick-acc-label">记到</span>' +
+        (state.accounts || []).map(function (a) {
+          return '<button class="chip sm quick-acc-chip' + (a.id === quickAccId() ? ' on' : '') +
+            '" data-act="set-quick-acc" data-id="' + esc(a.id) + '">' +
+            '<i style="background:' + esc(a.color) + '"></i>' + esc(a.name) + '</button>';
+        }).join('') +
+      '</div>' +
       '<div class="chips">' + chips + '</div>' +
       '<div class="list-sum">' + sumHtml + '</div>' +
       '<div class="rec-list">' + bodyHtml + '</div>' +
@@ -841,7 +851,11 @@
       meta = '转账 · ' + (accountName(r.accountId) || '?') + ' → ' + (accountName(r.toAccountId) || '?');
     } else {
       var acc = accountName(r.accountId);
-      meta = c.name + (acc ? ' · ' + acc : '');
+      // 账户名做成可点的，点一下直接换账户
+      meta = esc(c.name) + (acc
+        ? ' · <button class="acc-link" data-act="change-acc" data-id="' + esc(r.id) + '" title="换个账户">' +
+          esc(acc) + '</button>'
+        : ' · <button class="acc-link empty" data-act="change-acc" data-id="' + esc(r.id) + '" title="选账户">未指定</button>');
     }
     var sign = isIncome ? '+' : '';
     var amtCls = isIncome ? ' income' : (isTransfer ? ' transfer' : '');
@@ -849,7 +863,7 @@
       '<i class="rec-dot" style="background:' + esc(isTransfer ? '#B0B7C3' : c.color) + '"></i>' +
       '<div class="rec-main">' +
         '<div class="rec-item">' + esc(r.item || (isIncome ? '收入' : isTransfer ? '转账' : '支出')) + '</div>' +
-        '<div class="rec-meta">' + esc(meta) +
+        '<div class="rec-meta">' + meta +
           (compact ? ' · ' + esc(humanDate(r.date)) : '') + '</div>' +
       '</div>' +
       '<div class="rec-amt' + amtCls + '">' + sign + '¥' + C.money(r.amount) + '</div>' +
@@ -858,6 +872,20 @@
         '<button class="icon-btn tiny danger" data-act="del-rec" data-id="' + esc(r.id) + '" title="删除">✕</button>' +
       '</div>' +
     '</div>';
+  }
+
+  // 快速记账区当前选中的账户
+  function quickAccId() {
+    var q = view.quickAccountId;
+    if (q && accountOf(q)) return q;
+    return pickAccount({ pay: '', accountId: '' });
+  }
+
+  function syncQuickAccChips() {
+    var cur = quickAccId();
+    $$('.quick-acc-chip').forEach(function (b) {
+      b.classList.toggle('on', b.getAttribute('data-id') === cur);
+    });
   }
 
   /* ---------------- 日历 ---------------- */
@@ -1257,6 +1285,32 @@
       '</div></div>';
     }
 
+    if (view.modal === 'chgacc') {
+      var cr = state.records.filter(function (x) { return x.id === view.chgAccId; })[0];
+      if (!cr) return '';
+      var isXfer = C.recType(cr) === 'transfer';
+      var pickList = (state.accounts || []).map(function (a) {
+        var on = a.id === cr.accountId;
+        return '<button class="acc-pick-btn' + (on ? ' on' : '') +
+          '" data-act="do-change-acc" data-id="' + esc(a.id) + '">' +
+          '<i style="background:' + esc(a.color) + '"></i>' +
+          '<span>' + esc(a.name) + '</span>' +
+          (on ? '<em>当前</em>' : '') +
+        '</button>';
+      }).join('');
+      return '<div class="modal-mask"><div class="modal small">' +
+        '<div class="modal-head"><h3>换个账户</h3>' +
+          '<button class="icon-btn" data-act="close-modal">✕</button></div>' +
+        '<div class="chg-info">' +
+          '<span>' + esc(cr.item || '支出') + '</span>' +
+          '<b>¥' + C.money(cr.amount) + '</b>' +
+        '</div>' +
+        (isXfer ? '<p class="hint">这是转账记录，请用编辑功能改转出/转入。</p>' : '') +
+        '<div class="acc-pick">' + (isXfer ? '' : pickList) + '</div>' +
+        '<div class="modal-foot"><button class="btn ghost" data-act="close-modal">取消</button></div>' +
+      '</div></div>';
+    }
+
     if (view.modal === 'fixacc') {
       var src = accountOf(view.fixAccId);
       if (!src) return '';
@@ -1487,6 +1541,18 @@
         case 'add-cat': view.modal = 'addcat'; render(); break;
         case 'save-cat': saveCat(); break;
         case 'del-cat': delCat(id); break;
+        case 'set-quick-acc':
+          view.quickAccountId = el.getAttribute('data-id');
+          syncQuickAccChips();
+          break;
+        case 'change-acc':
+          view.chgAccId = id;
+          view.modal = 'chgacc';
+          render();
+          break;
+        case 'do-change-acc':
+          doChangeAcc(el.getAttribute('data-id'));
+          break;
         case 'fix-acc':
           view.fixAccId = id;
           view.modal = 'fixacc';
@@ -1684,12 +1750,13 @@
   // ② 用户明确设过「默认账户」→ 用它
   // ③ 否则用上次用过的账户（越用越顺手）
   // ④ 都没有 → 第一个账户
-  function pickAccount(p) {
+  function pickAccount(p, override) {
     var accounts = state.accounts || [];
     var exists = function (id) {
       return !!id && accounts.some(function (a) { return a.id === id; });
     };
     if (p && p.pay && exists(p.accountId)) return p.accountId;
+    if (exists(override)) return override;
     if (exists(state.settings.defaultAccountId)) return state.settings.defaultAccountId;
     if (exists(state.settings.lastAccountId)) return state.settings.lastAccountId;
     return accounts.length ? accounts[0].id : '';
@@ -1703,7 +1770,7 @@
 
   function commitQuick(p) {
     var type = p.type || 'expense';
-    var accId = pickAccount(p);
+    var accId = pickAccount(p, quickAccId());
     var rec = {
       id: C.uid('rec'),
       type: type,
@@ -1719,6 +1786,8 @@
     };
     state.records.push(rec);
     rememberAccount(rec.accountId);
+    // 记完就交还给「默认账户 / 上次账户」的规则，避免本次手选一直粘住
+    view.quickAccountId = '';
     save();
     view.quickText = '';
     view.month = rec.date.slice(0, 7);
@@ -1772,6 +1841,21 @@
     view.modal = '';
     render();
     toast('预算已更新');
+  }
+
+  function doChangeAcc(toId) {
+    var r = state.records.filter(function (x) { return x.id === view.chgAccId; })[0];
+    if (!r) { toast('记录不见了', 'err'); return; }
+    if (C.recType(r) === 'transfer') { toast('转账记录请用编辑改转出/转入', 'err'); return; }
+    if (r.accountId === toId) { view.modal = ''; view.chgAccId = ''; render(); return; }
+    makeSnapshot('改账户前', true);
+    r.accountId = toId;
+    rememberAccount(toId);
+    if (view.quickAccountId) view.quickAccountId = toId;
+    save();
+    view.modal = ''; view.chgAccId = '';
+    render();
+    toast('已改到「' + accountName(toId) + '」');
   }
 
   function doFixAcc(fromId) {

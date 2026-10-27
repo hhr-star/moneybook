@@ -359,7 +359,49 @@ const script = `
       var wechatCount = MB.state().records.filter(function (r) { return r.accountId === 'acc_wechat'; }).length;
       ok(wechatCount === 4, '微信应有 4 笔，实际 ' + wechatCount);
 
-      // 20. 空数据渲染
+      // 20. 快速记账区手动选账户
+      var s8 = MB.state();
+      s8.records = [];
+      s8.settings.lastAccountId = '';
+      s8.settings.defaultAccountId = '';
+      MB.setTab('records');
+      MB.view.quickAccountId = '';
+      MB.render();
+
+      var accChips = qa('.quick-acc-chip');
+      ok(accChips.length >= 4, '快速记账区有账户选项，实际 ' + accChips.length);
+      var bankChip = accChips.filter(function (b) { return b.getAttribute('data-id') === 'acc_bank'; })[0];
+      ok(bankChip !== undefined, '有银行卡选项');
+      bankChip.click();
+      ok(MB.view.quickAccountId === 'acc_bank', '点了银行卡应选中它');
+      ok(q('.quick-acc-chip.on').getAttribute('data-id') === 'acc_bank', '高亮切换正确');
+
+      q('#quickInput').value = '午饭 25';
+      q('[data-act="quick-add"]').click();
+      var q1 = MB.state().records[0];
+      ok(q1 && q1.accountId === 'acc_bank', '没说支付方式时应记到手动选的银行卡，实际 ' + (q1 && q1.accountId));
+
+      // 句子里说了支付方式，以说的为准
+      q('#quickInput').value = '打车 18 支付宝';
+      q('[data-act="quick-add"]').click();
+      var q2 = MB.state().records[1];
+      ok(q2 && q2.accountId === 'acc_alipay', '句子里说了支付宝应记到支付宝，实际 ' + (q2 && q2.accountId));
+
+      // 21. 单笔记录点账户名换账户
+      MB.setTab('records');
+      MB.render();
+      var accLink = q('[data-act="change-acc"]');
+      ok(accLink !== null, '记录行里账户名可点击');
+      accLink.click();
+      ok(q('.acc-pick') !== null, '换账户弹窗打开');
+      var pickBtns = qa('.acc-pick-btn');
+      var wechatPick = pickBtns.filter(function (b) { return b.getAttribute('data-id') === 'acc_wechat'; })[0];
+      ok(wechatPick !== undefined, '弹窗列出所有账户');
+      wechatPick.click();
+      var changed = MB.state().records[0];
+      ok(changed.accountId === 'acc_wechat', '点微信后该笔记录应改到微信，实际 ' + changed.accountId);
+
+      // 22. 空数据渲染
       st.records = [];
       MB.setTab('overview');
       ok(q('.empty') !== null, '空数据时显示引导');

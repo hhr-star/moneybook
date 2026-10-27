@@ -465,6 +465,44 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .flow-track i { display: block; height: 100%; border-radius: 99px; }
 .flow-amt { flex: 0 0 84px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
 
+.chip.sm { padding: 4px 10px; font-size: 12px; border-radius: 8px; }
+.quick-acc {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  margin: -4px 0 12px; padding-left: 2px;
+}
+.quick-acc-label { font-size: 12px; color: var(--muted); margin-right: 2px; }
+.quick-acc-chip { border-color: var(--line); background: #fff; }
+.quick-acc-chip.on { background: #eef2ff; border-color: #c7d3ff; color: var(--primary); font-weight: 600; }
+
+/* 记录行里可点击的账户名 */
+.acc-link {
+  border: 0; background: transparent; padding: 0 2px;
+  font: inherit; color: var(--primary); cursor: pointer;
+  border-bottom: 1px dashed currentColor;
+}
+.acc-link:hover { background: #eef2ff; border-radius: 4px; }
+.acc-link.empty { color: var(--warn); }
+
+/* 换账户弹窗 */
+.chg-info {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 10px 4px 14px; border-bottom: 1px solid var(--line); margin-bottom: 14px;
+  font-size: 14px;
+}
+.chg-info b { font-size: 18px; font-variant-numeric: tabular-nums; }
+.acc-pick { display: flex; flex-direction: column; gap: 6px; }
+.acc-pick-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px; border: 1px solid var(--line); border-radius: 10px;
+  background: #fbfcfe; font: inherit; font-size: 14px; cursor: pointer;
+  transition: .15s; text-align: left;
+}
+.acc-pick-btn:hover { background: #f2f6ff; border-color: #c7d3ff; }
+.acc-pick-btn.on { border-color: var(--primary); background: #eef2ff; }
+.acc-pick-btn i { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 10px; }
+.acc-pick-btn span { flex: 1; }
+.acc-pick-btn em { font-style: normal; font-size: 11px; color: var(--primary); }
+
 /* ---------- 日历 ---------- */
 .cal-card { max-width: 980px; }
 .cal-sum {
